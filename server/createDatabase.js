@@ -1,8 +1,19 @@
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('database.db');
+const path = require('path');
+const fs = require('fs');
+
+const dbPath = path.resolve(__dirname, 'database.db');
+
+// Check if the database file exists
+if (!fs.existsSync(dbPath)) {
+  console.error('Database file does not exist:', dbPath);
+  return;
+}
+
+const db = new sqlite3.Database(dbPath);
 
 function setupDatabase() {
-  const db = new sqlite3.Database('database.db');
+  const db = new sqlite3.Database(dbPath);
   db.serialize(() => {
     // Check if the 'computers' table already exists
     db.get(
