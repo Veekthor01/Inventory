@@ -1,0 +1,273 @@
+/* This CSS file is responsible for styling the form elements and form-related components */
+.computerForm {
+    background-color: #f5f5f5;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 3px 10px #cbced1, -2px -3px 10px #ffffff;
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  .formTitle {
+    margin-bottom: 30px;
+    color: #3090C7;
+    font-size: 20px;
+  }
+  
+  .form {
+    display: grid;
+    gap: 10px;
+  }
+  
+  .inputField {
+    padding: 8px;
+    margin-left: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f1f1f1;
+  }
+  .pictureField {
+    margin-left: 10px;
+  }
+  .pictureContainer {
+    display: inline-block;
+  }
+  .addButton {
+    width: 16%;
+    padding: 6px 6px;
+    background-color: #FF0000;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    top: -8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .addButton:hover {
+    background-color: #F62817;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  .updateButton {
+    width: 12%;
+    padding: 6px 6px;
+    background-color: #003a8c;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .updateButton:hover {
+    background-color: #0050b3;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .saveProfile {
+  display: flex;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+.successMessage {
+  padding: 10px;
+  background-color: #004225;
+  color: #fff;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+/* Style for the required indicator */
+.requiredIndicator::before {
+  content: "*"; 
+  color: red; 
+  margin-right: 5px; 
+}
+
+.warning {
+  border-color: red;
+}
+
+input {
+  border: 1px solid #ccc;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+label.required input:required + .requiredIndicator::before {
+  display: inline-block;
+}
+
+.formOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); 
+  -webkit-backdrop-filter: blur(8px);
+   backdrop-filter: blur(8px); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  overflow: auto; 
+}
+/*Profile page, change password and computer add forms*/
+.ProfileForm {
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0px 3px 10px #cbced1, -2px -3px 10px #ffffff;
+  width: 60%;
+  margin: 0 auto;
+}
+
+.addButtonForm {
+  width: 8%;
+  padding: 6px 6px;
+  background-color: #FF0000;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  top: -8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.addButtonForm:hover {
+  background-color: #F62817;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.updateButtonForm {
+  width: 27%;
+  padding: 6px 6px;
+  background-color: #003a8c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.updateButtonForm:hover {
+  background-color: #0050b3;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cancelForm {
+  color: #003a8c;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+}
+
+.cancelForm:hover {
+  color: #0050b3;
+  text-decoration: underline;
+}
+
+/* Media Queries*/
+@media screen and (min-width: 769px) and (max-width: 1024px) {  
+
+  .updateButton {
+    width: 16%;
+  }
+  .addButton {
+    width: 21%;
+  }
+  .computerForm {
+    width: 80%;
+  }
+}
+
+@media screen and (min-width: 426px) and (max-width: 768px) {
+  .updateButton {
+    width: 23%;
+  }
+  .addButton {
+    width: 29%;
+  }
+
+}
+
+@media screen and (min-width: 376px) and (max-width: 425px) {
+.ProfileForm {
+  width: 88%;
+}
+.updateButton {
+  width: 32%;
+}
+.addButton {
+  width: 41%;
+}
+}
+
+@media screen and (min-width: 321px) and (max-width: 375px) {
+  .ProfileForm {
+    width: 90%;
+  }
+  .updateButton {
+    width: 32%;
+  }
+  .addButton {
+    width: 41%;
+  }
+}
+
+@media screen and (max-width: 320px) {
+  .ProfileForm {
+    width: 95%;
+  }
+  .formTitle {
+    font-size: 18px;
+  }
+  
+  .form {
+    gap: 6px;
+    font-size: 14px;
+  }
+  
+  .inputField {
+    padding: 4px;
+    margin-left: 6px;
+  }
+  .updateButton {
+    width: 32%;
+  }
+  .addButton {
+    width: 41%;
+  }
+}
+
+@media screen and (max-width: 768px) {
+
+.addButtonForm {
+  width: 20%;
+  padding: 6px 6px;
+  background-color: #FF0000;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  top: -8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.updateButtonForm {
+  width: 25%;
+  padding: 6px 6px;
+  background-color: #003a8c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+}
