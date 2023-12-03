@@ -37,7 +37,7 @@ const { deleteMaintenance } = require('./delete');
 const { deleteActivity } = require('./delete');
 require('dotenv').config();
 
-const port = process.env.PORT || 5001; // Port to listen on
+const PORT = process.env.PORT || 5001; // Port to listen on
 const JWT_SECRET = process.env.JWT_SECRET // Secret key for JWT signing
 
 //Set up the database
@@ -932,10 +932,10 @@ function handleRequest(req, res, db, reqUrl, requestData) {
     
       if (method === 'GET' && url === '/') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('Server is running');
+        res.end('Hey this is my API running 🥳');
       }
     });
-    
+
     // Close the database connection when the server is closed
     server.on('close', () => {
       db.close((err) => {
@@ -948,7 +948,7 @@ function handleRequest(req, res, db, reqUrl, requestData) {
     });
     
     // Start the server and listen for incoming connections on the specified port
-    server.listen(port, () => {
-      console.log(`Server is running on localhost:${port}`);
+    server.listen(PORT, () => {
+      console.log(`Server is running on localhost:${PORT}`);
     });
     
