@@ -37,7 +37,7 @@ const { deleteMaintenance } = require('./delete');
 const { deleteActivity } = require('./delete');
 require('dotenv').config();
 
-const port = 5001; // Port number for the server
+const port = process.env.PORT || 5001; // Port to listen on
 const JWT_SECRET = process.env.JWT_SECRET // Secret key for JWT signing
 
 //Set up the database
@@ -925,6 +925,16 @@ function handleRequest(req, res, db, reqUrl, requestData) {
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(data));
     }
+
+    // Display message when the server is running
+    server.on('request', (req, res) => {
+      const { method, url } = req;
+    
+      if (method === 'GET' && url === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Server is running');
+      }
+    });
     
     // Close the database connection when the server is closed
     server.on('close', () => {

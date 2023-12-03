@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL
-//REACT_APP_BACKEND_URL=https://edu-inventory-server.vercel.app
+
 // Fetch computers
 export const fetchComputers = async (searchQuery) => {
     try {
