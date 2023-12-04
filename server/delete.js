@@ -1,136 +1,94 @@
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('database.db');
+const { sql } = require('@vercel/postgres');
 
-const deleteComputer = (computerId, db, callback) => {
-    const deleteComputerQuery = 'DELETE FROM computers WHERE id = ?';
-    db.run(deleteComputerQuery, [computerId], (err) => {
-      if (err) {
-        console.error(`Error deleting computer: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
+const deleteComputer = async (computerId) => {
+  const deleteComputerQuery = sql`DELETE FROM computers WHERE id = ${computerId}`;
+  try {
+    await sql`${deleteComputerQuery}`;
+  } catch (err) {
+    console.error(`Error deleting computer: ${err.message}`);
+  }
+};
 
-  const deleteAccessory = (accessoryId, db, callback) => {
-    const deleteAccessoryQuery = 'DELETE FROM accessories WHERE id = ?';
-    db.run(deleteAccessoryQuery, [accessoryId], (err) => {
-      if (err) {
-        console.error(`Error deleting accessory: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
-  
-  const deleteComponent = (componentId, db, callback) => {
-    const deleteComponentQuery = 'DELETE FROM components WHERE id = ?';
-    db.run(deleteComponentQuery, [componentId], (err) => {
-      if (err) {
-        console.error(`Error deleting component: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
+const deleteAccessory = async (accessoryId) => {
+  const deleteAccessoryQuery = sql`DELETE FROM accessories WHERE id = ${accessoryId}`;
+  try {
+    await sql`${deleteAccessoryQuery}`;
+  } catch (err) {
+    console.error(`Error deleting accessory: ${err.message}`);
+  }
+};
 
-  const deletePersonnel = (personnelId, db, callback) => {
-    const deletePersonnelQuery = 'DELETE FROM personnel WHERE id = ?';
-    db.run(deletePersonnelQuery, [personnelId], (err) => {
-      if (err) {
-        console.error(`Error deleting personnel: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
+const deleteComponent = async (componentId) => {
+  const deleteComponentQuery = sql`DELETE FROM components WHERE id = ${componentId}`;
+  try {
+    await sql`${deleteComponentQuery}`;
+  } catch (err) {
+    console.error(`Error deleting component: ${err.message}`);
+  }
+};
 
-  const deleteLicense = (licenseId, db, callback) => {
-    const deleteLicenseQuery = 'DELETE FROM licenses WHERE id = ?';
-    db.run(deleteLicenseQuery, [licenseId], (err) => {
-      if (err) {
-        console.error(`Error deleting license: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
+const deletePersonnel = async (personnelId) => {
+  const deletePersonnelQuery = sql`DELETE FROM personnel WHERE id = ${personnelId}`;
+  try {
+    await sql`${deletePersonnelQuery}`;
+  } catch (err) {
+    console.error(`Error deleting personnel: ${err.message}`);
+  }
+};
 
+const deleteLicense = async (licenseId) => {
+  const deleteLicenseQuery = sql`DELETE FROM licenses WHERE id = ${licenseId}`;
+  try {
+    await sql`${deleteLicenseQuery}`;
+  } catch (err) {
+    console.error(`Error deleting license: ${err.message}`);
+  }
+};
 
-  const deleteCategory = (categoryId, db, callback) => {
-    const deleteCategoryQuery = 'DELETE FROM categories WHERE id = ?';
-    db.run(deleteCategoryQuery, [categoryId], (err) => {
-      if (err) {
-        console.error(`Error deleting categories: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-      
-    });
-  };
+const deleteCategory = async (categoryId) => {
+  const deleteCategoryQuery = sql`DELETE FROM categories WHERE id = ${categoryId}`;
+  try {
+    await sql`${deleteCategoryQuery}`;
+  } catch (err) {
+    console.error(`Error deleting category: ${err.message}`);
+  }
+};
 
-  const deleteSupplier = (supplierId, db, callback) => {
-    const deleteSupplierQuery = 'DELETE FROM suppliers WHERE id = ?';
-    db.run(deleteSupplierQuery, [supplierId], (err) => {
-      if (err) {
-        console.error(`Error deleting Supplier: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
+const deleteSupplier = async (supplierId) => {
+  const deleteSupplierQuery = sql`DELETE FROM suppliers WHERE id = ${supplierId}`;
+  try {
+    await sql`${deleteSupplierQuery}`;
+  } catch (err) {
+    console.error(`Error deleting supplier: ${err.message}`);
+  }
+};
 
-  const deleteDepartment = (departmentId, db, callback) => {
-    const deleteDepartmentQuery = 'DELETE FROM department WHERE id = ?';
-    db.run(deleteDepartmentQuery, [departmentId], (err) => {
-      if (err) {
-        console.error(`Error deleting department: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
+const deleteDepartment = async (departmentId) => {
+  const deleteDepartmentQuery = sql`DELETE FROM department WHERE id = ${departmentId}`;
+  try {
+    await sql`${deleteDepartmentQuery}`;
+  } catch (err) {
+    console.error(`Error deleting department: ${err.message}`);
+  }
+};
 
-  const deleteMaintenance = (maintenanceId, db, callback) => {
-    const deleteMaintenanceQuery = 'DELETE FROM maintenance WHERE id = ?';
-    db.run(deleteMaintenanceQuery, [maintenanceId], (err) => {
-      if (err) {
-        console.error(`Error deleting maintenance: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
+const deleteMaintenance = async (maintenanceId) => {
+  const deleteMaintenanceQuery = sql`DELETE FROM maintenance WHERE id = ${maintenanceId}`;
+  try {
+    await sql`${deleteMaintenanceQuery}`;
+  } catch (err) {
+    console.error(`Error deleting maintenance: ${err.message}`);
+  }
+};
 
-  const deleteActivity = (recentActivityId, db, callback) => {
-    const deleteActivityQuery = 'DELETE FROM recentActivity WHERE id = ?';
-    db.run(deleteActivityQuery, [recentActivityId], (err) => {
-      if (err) {
-        console.error(`Error deleting ACTIVITY: ${err.message}`);
-        callback(err);
-      } else {
-        callback(null);
-      }
-    });
-  };
-
-
-  db.close((err) => {
-    if (err) {
-      console.error('Error closing the database connection:', err.message);
-    } else {
-      console.log('Database connection closed.');
-    }
-  });
+const deleteActivity = async (recentActivityId) => {
+  const deleteActivityQuery = sql`DELETE FROM recentActivity WHERE id = ${recentActivityId}`;
+  try {
+    await sql`${deleteActivityQuery}`;
+  } catch (err) {
+    console.error(`Error deleting ACTIVITY: ${err.message}`);
+  }
+};
 
   module.exports = {
     deleteComputer,
@@ -144,4 +102,3 @@ const deleteComputer = (computerId, db, callback) => {
     deleteMaintenance,
     deleteActivity,
   };
-  

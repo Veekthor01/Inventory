@@ -1,6 +1,6 @@
 const http = require('http');
 const url = require('url');
-const sqlite3 = require('sqlite3').verbose();
+const { sql } = require('@vercel/postgres');
 const setupDatabase = require('./createDatabase');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -41,7 +41,7 @@ const PORT = process.env.PORT || 5001; // Port to listen on
 const JWT_SECRET = process.env.JWT_SECRET // Secret key for JWT signing
 
 //Set up the database
-const db = setupDatabase();
+setupDatabase();
 
 //* Create an HTTP server and handle incoming requests
 const server = http.createServer((req, res) => {
@@ -66,7 +66,7 @@ const server = http.createServer((req, res) => {
           try {
             req.body = JSON.parse(requestData);
              // Handle the request with the appropriate handler
-            handleRequest(req, res, db, reqUrl, requestData);
+            handleRequest(req, res, reqUrl, requestData);
           } catch (error) {
             console.error('Invalid JSON data:', error.message);
             sendResponse(res, 400, { error: 'Invalid JSON data' });
@@ -74,7 +74,7 @@ const server = http.createServer((req, res) => {
         });
       } else {
         // Handle the request with the appropriate handler
-        handleRequest(req, res, db, reqUrl, requestData);
+        handleRequest(req, res, reqUrl, requestData);
       }
     } catch (error) {
       sendResponse(res, 500, { error: 'Internal Server Error' });
@@ -89,49 +89,44 @@ function handleCorsHeaders(req, res) {
 }
 
 //* Check if the table 'credentials' exists in the database
-db.get(
-  "SELECT name FROM sqlite_master WHERE type='table' AND name='credentials';",
-  (err, row) => {
-    if (err) {
-      console.error('Error checking table existence:', err.message);
-      return;
-    }
-    // If the 'credentials' table already exists, skip table creation check default user existence
-    if (row) {
+async function setupCredentialsTable() {
+  try {
+    const result = await sql`
+      SELECT 
+        EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE  table_schema = 'public'
+          AND    table_name   = 'credentials'
+        )
+    `;
+    if (result.rows[0].exists) {
       checkDefaultUserExists();
     } else {
-      // If the table doesn't exist, create it
-      db.run(`
-        CREATE TABLE IF NOT EXISTS credentials (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
+      await sql`
+        CREATE TABLE credentials (
+          id SERIAL PRIMARY KEY,
           username TEXT NOT NULL UNIQUE,
           password TEXT NOT NULL
-        );
-      `, (err) => {
-        if (err) {
-          console.error('Error creating table:', err.message);
-        } else {
-          insertDefaultUser();
-        }
-      });
+        )
+      `;
+      insertDefaultUser();
     }
+  } catch (err) {
+    console.error('Error checking table existence:', err.message);
   }
-);
+};
+
+setupCredentialsTable();
 
 //* Function to handle user login by checking the provided username and password against the database
-function handleLogin(req, res, db) {
+async function handleLogin(req, res) {
   // Extract the username and password from the request body
   const { username, password } = req.body;
-
-  // Retrieve the hashed password from the database for the given username
-  const selectQuery = 'SELECT password FROM credentials WHERE username = ?';
-  db.get(selectQuery, [username], (err, row) => {
-    if (err) {
-      console.error('Error retrieving user credentials:', err.message);
-      sendResponse(res, 500, { error: 'Error retrieving user credentials' });
-    } else if (row) {
-      const hashedPasswordFromDB = row.password;
-
+  try {
+    // Retrieve the hashed password from the database for the given username
+    const result = await sql`SELECT password FROM credentials WHERE username = ${username}`;
+    if (result.rows.length > 0) {
+      const hashedPasswordFromDB = result.rows[0].password;
       // Compare the provided password with the hashed password from the database
       const passwordMatch = bcrypt.compareSync(password, hashedPasswordFromDB);
       if (passwordMatch) {
@@ -147,8 +142,11 @@ function handleLogin(req, res, db) {
       // User not found
       sendResponse(res, 404, { error: 'User not found' });
     }
-  });
-}
+  } catch (err) {
+    console.error('Error retrieving user credentials:', err.message);
+    sendResponse(res, 500, { error: 'Error retrieving user credentials' });
+  }
+};
 
 //* Generate a JWT token for the given username and role
 function generateToken(username, res) {
@@ -161,290 +159,262 @@ function generateToken(username, res) {
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
   res.setHeader('Authorization', `Bearer ${token}`);
   return token;
-}
-
-
+};
 
 //* Function to change user's password in the database
-function changePassword(req, res, db) {
+async function changePassword(req, res) {
   try {
     const { username, oldPassword, newPassword } = req.body;
-
     // Retrieve the hashed password from the database for the given username
-    const selectQuery = 'SELECT password FROM credentials WHERE username = ?';
-    db.get(selectQuery, [username], (err, row) => {
-      if (err) {
-        console.error('Error retrieving user credentials:', err.message);
-        sendResponse(res, 500, { error: 'Error retrieving user credentials' });
-      } else if (row) {
-        const hashedPasswordFromDB = row.password;
-
-        // Verify the old password
-        const passwordMatch = bcrypt.compareSync(oldPassword, hashedPasswordFromDB);
-        if (passwordMatch) { 
-          // Hash the new password
-          const hashedNewPassword = bcrypt.hashSync(newPassword, 10);
-
-          // Update the password in the database
-          const updateQuery = 'UPDATE credentials SET password = ? WHERE username = ?';
-          db.run(updateQuery, [hashedNewPassword, username], (err) => {
-            if (err) {
-              console.error('Error updating user password:', err.message);
-              sendResponse(res, 500, { error: 'Error updating user password' });
-            } else {
-              sendResponse(res, 200, { message: 'Password changed successfully' });
-            }
-          });
-        } else {
-          sendResponse(res, 401, { error: 'Invalid old password' });
-        }
+    const result = await sql`SELECT password FROM credentials WHERE username = ${username}`;
+    if (result.rows.length > 0) {
+      const hashedPasswordFromDB = result.rows[0].password;
+      // Verify the old password
+      const passwordMatch = bcrypt.compareSync(oldPassword, hashedPasswordFromDB);
+      if (passwordMatch) { 
+        // Hash the new password
+        const hashedNewPassword = bcrypt.hashSync(newPassword, 10);
+        // Update the password in the database
+        await sql`UPDATE credentials SET password = ${hashedNewPassword} WHERE username = ${username}`;
+        sendResponse(res, 200, { message: 'Password changed successfully' });
       } else {
-        sendResponse(res, 404, { error: 'User not found' });
+        sendResponse(res, 401, { error: 'Invalid old password' });
       }
-    });
+    } else {
+      sendResponse(res, 404, { error: 'User not found' });
+    }
   } catch (error) {
     console.error('Error changing password:', error);
     sendResponse(res, 400, { error: 'Error changing password' });
   }
-}
+};
 
 //* Function to check if the default user exists in the database
-function checkDefaultUserExists() {
+async function checkDefaultUserExists() {
   const defaultUsername = 'admin';
-
-  // Check if the default user already exists in the credentials table
-  const selectQuery = 'SELECT * FROM credentials WHERE username = ?';
-  db.get(selectQuery, [defaultUsername], (err, row) => {
-    if (err) {
-      console.error('Error checking default user existence:', err.message);
-    } else if (!row) {
+  try {
+    // Check if the default user already exists in the credentials table
+    const result = await sql`SELECT * FROM credentials WHERE username = ${defaultUsername}`;
+    if (result.rows.length === 0) {
       // If the default user doesn't exist, insert it
       insertDefaultUser();
     }
-  });
-}
+  } catch (err) {
+    console.error('Error checking default user existence:', err.message);
+  }
+};
 
 //* Function to insert the default user into the database
-function insertDefaultUser() {
+async function insertDefaultUser() {
   const defaultUsername = 'admin';
   const defaultPassword = 'password';
-
   // Hash the default password
   const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
-
-  // Insert the default user into the credentials table
-  const insertQuery = 'INSERT INTO credentials (username, password) VALUES (?, ?)';
-  db.run(insertQuery, [defaultUsername, hashedPassword], (err) => {
-    if (err) {
-      console.error('Error inserting default user:', err.message);
-    }
-  });
+  try {
+    // Insert the default user into the credentials table
+    await sql`INSERT INTO credentials (username, password) VALUES (${defaultUsername}, ${hashedPassword})`;
+  } catch (err) {
+    console.error('Error inserting default user:', err.message);
+  }
 }
 
 // Function to insert recent activity into the database
-const insertActivity = (activity) => {
-  const insertActivityQuery = `
-    INSERT INTO recentActivity (item, action, user, datetime)
-    VALUES (?, ?, ?, ?);
-  `;
-
-  db.run(
-    insertActivityQuery,
-    [activity.item, activity.action, activity.user, activity.datetime],
-    (err) => {
-      if (err) {
-        console.error('Error inserting activity:', err);
-      }
-    }
-  );
+const insertActivity = async (activity) => {
+  try {
+    // Insert the activity into the recentActivity table
+    await sql`
+      INSERT INTO recentActivity (item, action, user, datetime)
+      VALUES (${activity.item}, ${activity.action}, ${activity.user}, ${activity.datetime})
+    `;
+  } catch (err) {
+    console.error('Error inserting activity:', err);
+  }
 };
 
 //* Function to handle incoming HTTP requests and provide appropriate responses
-function handleRequest(req, res, db, reqUrl, requestData) {
-    if (req.method === 'GET') {
-        switch (reqUrl.pathname) {
-          case '/api/credentials':
-            // Fetch and return actual information about credentials
-            const selectCredentialsQuery = 'SELECT * FROM credentials;';
-            db.all(selectCredentialsQuery, (err, rows) => {
-              if (err) {
-                sendResponse(res, 500, { error: 'Database error' });
-              } else if (rows.length === 0) {
-                sendResponse(res, 404, { error: 'No credentials found' });
-              } else {
-                sendResponse(res, 200, { credentials: rows });
-              }
-            });
-            break;
-            case '/api/recentActivity':
+async function handleRequest(req, res, reqUrl, requestData) {
+  if (req.method === 'GET') {
+    switch (reqUrl.pathname) {
+      case '/api/credentials':
+        try {
+          // Fetch and return actual information about credentials
+          const result = await sql`SELECT * FROM credentials`;
+          if (result.rows.length === 0) {
+            sendResponse(res, 404, { error: 'No credentials found' });
+          } else {
+            sendResponse(res, 200, { credentials: result.rows });
+          }
+        } catch (err) {
+          sendResponse(res, 500, { error: 'Database error' });
+        }
+        break;
+        case '/api/recentActivity':
+          try {
             // Fetch and return actual information about recent_activity
-            const selectRecentActivityQuery = 'SELECT * FROM recentActivity ORDER BY datetime DESC;';
-            db.all(selectRecentActivityQuery, (err, rows) => {
-              if (err) {
-                sendResponse(res, 500, { error: 'Database error' });
-              } else if (rows.length === 0) {
-                sendResponse(res, 404, { error: 'No activity found' });
-              } else {
-                sendResponse(res, 200, rows);
-              }
-            });
-            break;
-            case '/api/chart_data':
-            // Fetch and return actual information about charts
-            const selectchartDataQuery = `SELECT component_count, computer_count, 
-            accessory_count, personnel_count, license_count, supplier_count FROM chart_data LIMIT 1;`;
-            db.all(selectchartDataQuery, (err, rows) => {
-              if (err) {
-                sendResponse(res, 500, { error: 'Database error' });
-              } else if (rows.length === 0) {
+            const result = await sql`SELECT * FROM recentActivity ORDER BY datetime DESC`;
+            if (result.rows.length === 0) {
+              sendResponse(res, 404, { error: 'No activity found' });
+            } else {
+              sendResponse(res, 200, result.rows);
+            }
+          } catch (err) {
+            sendResponse(res, 500, { error: 'Database error' });
+          }
+          break;
+          case '/api/chart_data':
+            try {
+              // Fetch and return actual information about charts
+              const result = await sql`SELECT component_count, computer_count, 
+              accessory_count, personnel_count, license_count, supplier_count FROM chart_data LIMIT 1`;
+              if (result.rows.length === 0) {
                 sendResponse(res, 404, { error: 'No chart Data found' });
               } else {
                 updateChartData(); // Update the chart data
-                sendResponse(res, 200, rows);
+                sendResponse(res, 200, result.rows);
               }
-            });
+            } catch (err) {
+              sendResponse(res, 500, { error: 'Database error' });
+            }
             break;
-            case '/api/room_data':
+          case '/api/room_data':
+            try {
+              // Fetch and return actual information about room_data
+              const result = await sql`SELECT * FROM room_data`;
+              if (result.rows.length === 0) {
+                sendResponse(res, 404, { error: 'No room data found' });
+              } else {
+                sendResponse(res, 200, result.rows);
+              }
+            } catch (err) {
+              sendResponse(res, 500, { error: 'Database error' });
+            }
+            break;
+          case '/api/computers':
+            try {
               // Fetch and return actual information about computers
-              const selectRoomItemsQuery = 'SELECT * FROM room_data;';
-              db.all(selectRoomItemsQuery, (err, rows) => {
-                if (err) {
-                  sendResponse(res, 500, { error: 'Database error' });
-                } else if (rows.length === 0) {
-                  sendResponse(res, 404, { error: 'No computers found' });
+              const result = await sql`SELECT * FROM computers`;
+              if (result.rows.length === 0) {
+                sendResponse(res, 404, { error: 'No computers found' });
+              } else {
+                sendResponse(res, 200, result.rows);
+              }
+            } catch (err) {
+              sendResponse(res, 500, { error: 'Database error' });
+            }
+            break;
+            case '/api/accessories':
+              try {
+                // Fetch and return actual information about accessories
+                const result = await sql`SELECT * FROM accessories`;
+                if (result.rows.length === 0) {
+                  sendResponse(res, 404, { error: 'No accessories found' });
                 } else {
-                  sendResponse(res, 200, rows);
+                  sendResponse(res, 200, result.rows);
                 }
-              });
+              } catch (err) {
+                sendResponse(res, 500, { error: 'Database error' });
+              }
               break;
-            case '/api/computers':
-              // Fetch and return actual information about computers
-              const selectComputerQuery = 'SELECT * FROM computers;';
-              db.all(selectComputerQuery, (err, rows) => {
-                if (err) {
-                  sendResponse(res, 500, { error: 'Database error' });
-                } else if (rows.length === 0) {
-                  sendResponse(res, 404, { error: 'No computers found' });
+            case '/api/components':
+              try {
+                // Fetch and return actual information about components
+                const result = await sql`SELECT * FROM components ORDER BY id DESC`;
+                if (result.rows.length === 0) {
+                  sendResponse(res, 404, { error: 'No components found' });
                 } else {
-                  sendResponse(res, 200, rows);
+                  sendResponse(res, 200, result.rows);
                 }
-              });
+              } catch (err) {
+                sendResponse(res, 500, { error: 'Database error' });
+              }
               break;
-      case '/api/accessories':
-        // Fetch and return actual information about accessories
-        const selectAccessoryQuery = 'SELECT * FROM accessories;';
-        db.all(selectAccessoryQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No accessories found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        
-        break;
-        case '/api/components':
-        // Fetch and return actual information about components
-        const selectComponentQuery = 'SELECT * FROM components ORDER BY id DESC;';
-        db.all(selectComponentQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No components found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        break;
-        case '/api/personnel':
-        
-        // Fetch and return actual information about personnel
-        const selectPersonnelQuery = 'SELECT * FROM personnel;';
-        db.all(selectPersonnelQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No personnel found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        break;
-        case '/api/licenses':
-        // Fetch and return actual information about licenses
-        const selectLicenseQuery = 'SELECT * FROM licenses;';
-        db.all(selectLicenseQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No licenses found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        break;
-        case '/api/categories':
-        // Fetch and return actual information about categories
-        const selectCategoryQuery = 'SELECT * FROM categories;';
-        db.all(selectCategoryQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No categories found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        break;
-        case '/api/suppliers':
-        // Fetch and return actual information about suppliers
-        const selectSupplierQuery = 'SELECT * FROM suppliers;';
-        db.all(selectSupplierQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No suppliers found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        break;
-        case '/api/department':
-        // Fetch and return actual information about departments
-        const selectDepartmentQuery = 'SELECT * FROM department;';
-        db.all(selectDepartmentQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No departments found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        break;
-        case '/api/maintenance':
-        // Fetch and return actual information about maintenance
-        const selectMaintenanceQuery = 'SELECT * FROM maintenance;';
-        db.all(selectMaintenanceQuery, (err, rows) => {
-          if (err) {
-            sendResponse(res, 500, { error: 'Database error' });
-          } else if (rows.length === 0) {
-            sendResponse(res, 404, { error: 'No maintenance found' });
-          } else {
-            sendResponse(res, 200, rows);
-          }
-        });
-        break;
-      default:
-        sendResponse(res, 404, { message: 'Endpoint not found' });
-    } 
+            case '/api/personnel':
+              try {
+                // Fetch and return actual information about personnel
+                const result = await sql`SELECT * FROM personnel`;
+                if (result.rows.length === 0) {
+                  sendResponse(res, 404, { error: 'No personnel found' });
+                } else {
+                  sendResponse(res, 200, result.rows);
+                }
+              } catch (err) {
+                sendResponse(res, 500, { error: 'Database error' });
+              }
+              break;
+              case '/api/licenses':
+                try {
+                  // Fetch and return actual information about licenses
+                  const result = await sql`SELECT * FROM licenses`;
+                  if (result.rows.length === 0) {
+                    sendResponse(res, 404, { error: 'No licenses found' });
+                  } else {
+                    sendResponse(res, 200, result.rows);
+                  }
+                } catch (err) {
+                  sendResponse(res, 500, { error: 'Database error' });
+                }
+                break;
+              case '/api/categories':
+                try {
+                  // Fetch and return actual information about categories
+                  const result = await sql`SELECT * FROM categories`;
+                  if (result.rows.length === 0) {
+                    sendResponse(res, 404, { error: 'No categories found' });
+                  } else {
+                    sendResponse(res, 200, result.rows);
+                  }
+                } catch (err) {
+                  sendResponse(res, 500, { error: 'Database error' });
+                }
+                break;
+              case '/api/suppliers':
+                try {
+                  // Fetch and return actual information about suppliers
+                  const result = await sql`SELECT * FROM suppliers`;
+                  if (result.rows.length === 0) {
+                    sendResponse(res, 404, { error: 'No suppliers found' });
+                  } else {
+                    sendResponse(res, 200, result.rows);
+                  }
+                } catch (err) {
+                  sendResponse(res, 500, { error: 'Database error' });
+                }
+                break;
+                case '/api/department':
+                  try {
+                    // Fetch and return actual information about departments
+                    const result = await sql`SELECT * FROM department`;
+                    if (result.rows.length === 0) {
+                      sendResponse(res, 404, { error: 'No departments found' });
+                    } else {
+                      sendResponse(res, 200, result.rows);
+                    }
+                  } catch (err) {
+                    sendResponse(res, 500, { error: 'Database error' });
+                  }
+                  break;
+                case '/api/maintenance':
+                  try {
+                    // Fetch and return actual information about maintenance
+                    const result = await sql`SELECT * FROM maintenance`;
+                    if (result.rows.length === 0) {
+                      sendResponse(res, 404, { error: 'No maintenance found' });
+                    } else {
+                      sendResponse(res, 200, result.rows);
+                    }
+                  } catch (err) {
+                    sendResponse(res, 500, { error: 'Database error' });
+                  }
+                  break;
+                  default:
+                  sendResponse(res, 404, { message: 'Endpoint not found' });
+                } 
         // If the incoming request method is POST
       } else if (req.method === 'POST') {
         switch (reqUrl.pathname) {
           case '/api/login':
              // Handle the login request and response
-              handleLogin(req, res, db);
+              handleLogin(req, res);
               // log the activity details for the login action
               const activity = {
                 item: 'Victor',
@@ -571,7 +541,7 @@ function handleRequest(req, res, db, reqUrl, requestData) {
         switch (reqUrl.pathname) {
           case '/api/change-password':
             // Handle the change password request and response
-             changePassword(req, res, db);
+             changePassword(req, res);
               // log the activity details for the change password action
              const activity = {
               item: 'Victor',
@@ -585,340 +555,332 @@ function handleRequest(req, res, db, reqUrl, requestData) {
             try {
               const updatedComputer = req.body;
               const computerId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateComputer(computerId, updatedComputer, db, (err) => {
-                if (err) {
-                  console.error('Error updating computer:', err);
-                  sendResponse(res, 400, { error: 'Error updating computer' });
-                } else {
-                  sendResponse(res, 200, { message: 'Computer updated successfully' });
-                  const activity = {
-                    item: 'computer',
-                    action: 'update',
-                    user: 'admin',
-                    datetime: new Date().toISOString(),
-                  };
-                  insertActivity(activity);
-                }
-              });
+              updateComputer(computerId, updatedComputer);
+              sendResponse(res, 200, { message: 'Computer updated successfully' });
+              const activity = {
+                item: 'computer',
+                action: 'update',
+                user: 'admin',
+                datetime: new Date().toISOString(),
+              };
+              insertActivity(activity);
             } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
+              sendResponse(res, 400, { error: 'Error updating computer' });
             }
             break;
             case '/api/accessories':
-            try {
-              const updatedAccessory = req.body;
-              const accessoryId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateAccessory(accessoryId, updatedAccessory, db, (err) => {
-                if (err) {
-                  console.error('Error updating accessory:', err);
-                  sendResponse(res, 400, { error: 'Error updating accessory' });
-                } else {
-                  sendResponse(res, 200, { message: 'Accessory updated successfully' });
-                  const activity = {
-                    item: 'accessory',
-                    action: 'update',
-                    user: 'admin',
-                    datetime: new Date().toISOString(),
-                  };
-                  insertActivity(activity);
-                }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
-            }
-            break;
+              try {
+                const updatedAccessory = req.body;
+                const accessoryId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                updateAccessory(accessoryId, updatedAccessory);
+                sendResponse(res, 200, { message: 'Accessory updated successfully' });
+                const activity = {
+                  item: 'accessory',
+                  action: 'update',
+                  user: 'admin',
+                  datetime: new Date().toISOString(),
+                };
+                insertActivity(activity);
+              } catch (error) {
+                console.error('Invalid JSON data:', error);
+                sendResponse(res, 400, { error: 'Invalid JSON data' });
+              }
+              break;
             case '/api/components':
-            try {
-              const updatedComponent = req.body;
-              const componentId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateComponent(componentId, updatedComponent, db, (err) => {
-                if (err) {
-                  console.error('Error updating component:', err);
-                  sendResponse(res, 400, { error: 'Error updating component' });
-                } else {
-                  sendResponse(res, 200, { message: 'Component updated successfully' });
-                  const activity = {
-                    item: 'component',
-                    action: 'update',
-                    user: 'admin',
-                    datetime: new Date().toISOString(),
-                  };
-                  insertActivity(activity);
-                }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
-            }
-            break;
+              try {
+                const updatedComponent = req.body;
+                const componentId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                updateComponent(componentId, updatedComponent);
+                sendResponse(res, 200, { message: 'Component updated successfully' });
+                const activity = {
+                  item: 'component',
+                  action: 'update',
+                  user: 'admin',
+                  datetime: new Date().toISOString(),
+                };
+                insertActivity(activity);
+              } catch (error) {
+                sendResponse(res, 400, { error: 'Error updating component' });
+              }
+              break;
             case '/api/personnel':
-            try {
-              const updatedPersonnel = req.body;
-              const personnelId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updatePersonnel(personnelId, updatedPersonnel, db, (err) => {
-                if (err) {
-                  console.error('Error updating personnel:', err);
-                  sendResponse(res, 400, { error: 'Error updating personnel' });
-                } else {
-                  sendResponse(res, 200, { message: 'Personnel updated successfully' });
-                  // Insert recent activity entry
+              try {
+                const updatedPersonnel = req.body;
+                const personnelId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                updatePersonnel(personnelId, updatedPersonnel);
+                sendResponse(res, 200, { message: 'Personnel updated successfully' });
+                const activity = {
+                  item: 'personnel',
+                  action: 'update',
+                  user: 'admin',
+                  datetime: new Date().toISOString(),
+                };
+                insertActivity(activity);
+              } catch (error) {
+                sendResponse(res, 400, { error: 'Error updating personnel' });
+              }
+              break;
+              case '/api/licenses':
+                try {
+                  const updatedLicense = req.body;
+                  const licenseId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                  updateLicense(licenseId, updatedLicense);
+                  sendResponse(res, 200, { message: 'License updated successfully' });
                   const activity = {
-                    item: 'personnel',
+                    item: 'license',
                     action: 'update',
                     user: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
-                }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
-            }
-            break;
-            case '/api/licenses':
-            try {
-              const updatedLicense = req.body;
-              const licenseId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateLicense(licenseId, updatedLicense, db, (err) => {
-                if (err) {
-
-                  console.error('Error updating license:', err);
+                } catch (error) {
                   sendResponse(res, 400, { error: 'Error updating license' });
-                } else {
-                  sendResponse(res, 200, { message: 'License updated successfully' });
                 }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
-            }
-            break;
-            case '/api/categories':
-            try {
-              const updatedCategory = req.body;
-              const categoryId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateCategory(categoryId, updatedCategory, db, (err) => {
-                if (err) {
-                  console.error('Error updating category:', err);
-                  sendResponse(res, 400, { error: 'Error updating category' });
-                } else {
+                break;
+              case '/api/categories':
+                try {
+                  const updatedCategory = req.body;
+                  const categoryId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                  updateCategory(categoryId, updatedCategory);
                   sendResponse(res, 200, { message: 'Category updated successfully' });
+                  const activity = {
+                    item: 'category',
+                    action: 'update',
+                    user: 'admin',
+                    datetime: new Date().toISOString(),
+                  };
+                  insertActivity(activity);
+                } catch (error) {
+                  sendResponse(res, 400, { error: 'Error updating category' });
                 }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
-            }
-            break;
+                break;
             case '/api/suppliers':
-            try {
-              const updatedSupplier = req.body;
-              const supplierId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateSupplier(supplierId, updatedSupplier, db, (err) => {
-                if (err) {
-                  console.error('Error updating supplier:', err);
-                  sendResponse(res, 400, { error: 'Error updating supplier' });
-                } else {
-                  sendResponse(res, 200, { message: 'Supplier updated successfully' });
-                }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
-            }
-            break;
+              try {
+                const updatedSupplier = req.body;
+                const supplierId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                updateSupplier(supplierId, updatedSupplier);
+                sendResponse(res, 200, { message: 'Supplier updated successfully' });
+                const activity = {
+                  item: 'supplier',
+                  action: 'update',
+                  user: 'admin',
+                  datetime: new Date().toISOString(),
+                };
+                insertActivity(activity);
+              } catch (error) {
+                sendResponse(res, 400, { error: 'Error updating supplier' });
+              }
+              break;
             case '/api/department':
-            try {
-              const updatedDepartment = req.body;
-              const departmentId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateDepartment(departmentId, updatedDepartment, db, (err) => {
-                if (err) {
-                  console.error('Error updating department:', err);
-                  sendResponse(res, 400, { error: 'Error updating department' });
-                } else {
-                  sendResponse(res, 200, { message: 'Department updated successfully' });
-                }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
-            }
-            break;
-            case '/api/maintenance':
-            try {
-              const updatedMaintenance = req.body;
-              const maintenanceId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
-              updateMaintenance(maintenanceId, updatedMaintenance, db, (err) => {
-                if (err) {
-                  console.error('Error updating maintenance:', err);
-                  sendResponse(res, 400, { error: 'Error updating maintenance' });
-                } else {
+              try {
+                const updatedDepartment = req.body;
+                const departmentId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                updateDepartment(departmentId, updatedDepartment);
+                sendResponse(res, 200, { message: 'Department updated successfully' });
+                const activity = {
+                  item: 'department',
+                  action: 'update',
+                  user: 'admin',
+                  datetime: new Date().toISOString(),
+                };
+                insertActivity(activity);
+              } catch (error) {
+                sendResponse(res, 400, { error: 'Error updating department' });
+              }
+              break;
+              case '/api/maintenance':
+                try {
+                  const updatedMaintenance = req.body;
+                  const maintenanceId = reqUrl.query.id; // Extract the id parameter from reqUrl.query
+                  updateMaintenance(maintenanceId, updatedMaintenance);
                   sendResponse(res, 200, { message: 'Maintenance updated successfully' });
+                  const activity = {
+                    item: 'maintenance',
+                    action: 'update',
+                    user: 'admin',
+                    datetime: new Date().toISOString(),
+                  };
+                  insertActivity(activity);
+                } catch (error) {
+                  sendResponse(res, 400, { error: 'Error updating maintenance' });
                 }
-              });
-            } catch (error) {
-              console.error('Invalid JSON data:', error);
-              sendResponse(res, 400, { error: 'Invalid JSON data' });
+                break;
+              default:
+              sendResponse(res, 404, { message: 'Endpoint not found' });
             }
-            break;
-          default:
-            sendResponse(res, 404, { message: 'Endpoint not found' });
-        }
         // If the incoming request method is DELETE
       } else if (req.method === 'DELETE') {
         switch (reqUrl.pathname) {
           case '/api/computers':
-        const computerId = reqUrl.query.id;
-        deleteComputer(computerId, db, (err) => {
-          if (err) {
-            console.error('Error deleting computer:', err);
-            sendResponse(res, 500, { error: 'Error deleting computer' });
-          } else {
-            sendResponse(res, 200, { message: 'Computer deleted successfully' });
-           // Insert recent activity entry
-                  const activity = {
-                    item: 'computer',
-                    action: 'delete',
-                    user: 'admin',
-                    datetime: new Date().toISOString(),
-                  };
-                  insertActivity(activity);
-                }
-              });
-              break;
-            case '/api/accessories':
+            try {
+              const computerId = reqUrl.query.id;
+              deleteComputer(computerId);
+              sendResponse(res, 200, { message: 'Computer deleted successfully' });
+              const activity = {
+                item: 'computer',
+                action: 'delete',
+                user: 'admin',
+                datetime: new Date().toISOString(),
+              };
+              insertActivity(activity);
+            } catch (error) {
+              console.error('Error deleting computer:', error);
+              sendResponse(res, 500, { error: 'Error deleting computer' });
+            }
+            break;
+          case '/api/accessories':
+            try {
               const accessoryId = reqUrl.query.id;
-              deleteAccessory(accessoryId, db, (err) => {
-                if (err) {
-                  console.error('Error deleting accessory:', err);
-                  sendResponse(res, 500, { error: 'Error deleting accessory' });
-                } else {
-                  sendResponse(res, 200, { message: 'Accessory deleted successfully' });
-                  // Insert recent activity entry
-                  const activity = {
-                    item: 'accessory',
-                    action: 'delete',
-                    user: 'admin',
-                    datetime: new Date().toISOString(),
-                  };
-                  insertActivity(activity);
-                }
-              });
-              break;
-              case '/api/components':
+              deleteAccessory(accessoryId);
+              sendResponse(res, 200, { message: 'Accessory deleted successfully' });
+              const activity = {
+                item: 'accessory',
+                action: 'delete',
+                user: 'admin',
+                datetime: new Date().toISOString(),
+              };
+              insertActivity(activity);
+            } catch (error) {
+              console.error('Error deleting accessory:', error);
+              sendResponse(res, 500, { error: 'Error deleting accessory' });
+            }
+            break;
+            case '/api/components':
+              try {
                 const componentId = reqUrl.query.id;
-                deleteComponent(componentId, db, (err) => {
-                  if (err) {
-                    console.error('Error deleting component:', err);
-                    sendResponse(res, 500, { error: 'Error deleting component' });
-                  } else {
-                    sendResponse(res, 200, { message: 'Component deleted successfully' });
-                    // Insert recent activity entry
-                  const activity = {
-                    item: 'component',
-                    action: 'delete',
-                    user: 'admin',
-                    datetime: new Date().toISOString(),
-                  };
-                  insertActivity(activity);
-                  }
-                });
-                break;
+                deleteComponent(componentId);
+                sendResponse(res, 200, { message: 'Component deleted successfully' });
+                const activity = {
+                  item: 'component',
+                  action: 'delete',
+                  user: 'admin',
+                  datetime: new Date().toISOString(),
+                };
+                insertActivity(activity);
+              } catch (error) {
+                console.error('Error deleting component:', error);
+                sendResponse(res, 500, { error: 'Error deleting component' });
+              }
+              break;
             case '/api/personnel':
-              const personnelId = reqUrl.query.id;
-              deletePersonnel(personnelId, db, (err) => {
-                if (err) {
-                  console.error('Error deleting personnel:', err);
-                  sendResponse(res, 500, { error: 'Error deleting personnel' });
-                } else {
-                  sendResponse(res, 200, { message: 'Personnel deleted successfully' });
-                  // Insert recent activity entry
+              try {
+                const personnelId = reqUrl.query.id;
+                deletePersonnel(personnelId);
+                sendResponse(res, 200, { message: 'Personnel deleted successfully' });
+                const activity = {
+                  item: 'personnel',
+                  action: 'delete',
+                  user: 'admin',
+                  datetime: new Date().toISOString(),
+                };
+                insertActivity(activity);
+              } catch (error) {
+                console.error('Error deleting personnel:', error);
+                sendResponse(res, 500, { error: 'Error deleting personnel' });
+              }
+              break;
+              case '/api/licenses':
+                try {
+                  const licenseId = reqUrl.query.id;
+                  deleteLicense(licenseId);
+                  sendResponse(res, 200, { message: 'License deleted successfully' });
                   const activity = {
-                    item: 'personnel',
+                    item: 'license',
                     action: 'delete',
                     user: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
-                }
-              });
-              break;
-            case '/api/licenses':
-              const licenseId = reqUrl.query.id;
-              deleteLicense(licenseId, db, (err) => {
-                if (err) {
-                  console.error('Error deleting license:', err);
+                } catch (error) {
+                  console.error('Error deleting license:', error);
                   sendResponse(res, 500, { error: 'Error deleting license' });
-                } else {
-                  sendResponse(res, 200, { message: 'License deleted successfully' });
                 }
-              });
-              break;
-            case '/api/categories':
-              const categoryId = reqUrl.query.id;
-              deleteCategory(categoryId, db, (err) => {
-                if (err) {
-                  console.error('Error deleting category:', err);
-                  sendResponse(res, 500, { error: 'Error deleting category' });
-                } else {
-                  sendResponse(res, 200, { message: 'Category deleted successfully' });
-                }
-              });
-              break;
-            case '/api/suppliers':
-              const supplierId = reqUrl.query.id;
-              deleteSupplier(supplierId, db, (err) => {
-                if (err) {
-                  console.error('Error deleting supplier:', err);
-                  sendResponse(res, 500, { error: 'Error deleting supplier' });
-                } else {
-                  sendResponse(res, 200, { message: 'Supplier deleted successfully' });
-                }
-              });
-              break;
-            case '/api/department':
-              const departmentId = reqUrl.query.id;
-              deleteDepartment(departmentId, db, (err) => {
-                if (err) {
-                  console.error('Error deleting department:', err);
-                  sendResponse(res, 500, { error: 'Error deleting department' });
-                } else {
-                  sendResponse(res, 200, { message: 'Department deleted successfully' });
-                }
-              });
-              break;
-            case '/api/maintenance':
-              const maintenanceId = reqUrl.query.id;
-              deleteMaintenance(maintenanceId, db, (err) => {
-                if (err) {
-                  console.error('Error deleting maintenance:', err);
-                  sendResponse(res, 500, { error: 'Error deleting maintenance' });
-                } else {
-                  sendResponse(res, 200, { message: 'Maintenance deleted successfully' });
-                }
-              });
-              break;
-              case '/api/recentActivity':
-                const recentActivityId = reqUrl.query.id;
-                deleteActivity(recentActivityId, db, (err) => {
-                  if (err) {
-                    console.error('Error deleting activity:', err);
-                    sendResponse(res, 500, { error: 'Error deleting activity' });
-                  } else {
-                    sendResponse(res, 200, { message: 'Activity deleted successfully' });
-                  }
-                });
                 break;
-          default:
-            sendResponse(res, 404, { message: 'Endpoint not found' });
-        }
-      } else {
-        sendResponse(res, 405, { message: 'Method not allowed' });
-      }
-    }
+              case '/api/categories':
+                try {
+                  const categoryId = reqUrl.query.id;
+                  deleteCategory(categoryId);
+                  sendResponse(res, 200, { message: 'Category deleted successfully' });
+                  const activity = {
+                    item: 'category',
+                    action: 'delete',
+                    user: 'admin',
+                    datetime: new Date().toISOString(),
+                  };
+                  insertActivity(activity);
+                } catch (error) {
+                  console.error('Error deleting category:', error);
+                  sendResponse(res, 500, { error: 'Error deleting category' });
+                }
+                break;
+              case '/api/suppliers':
+                try {
+                  const supplierId = reqUrl.query.id;
+                  deleteSupplier(supplierId);
+                  sendResponse(res, 200, { message: 'Supplier deleted successfully' });
+                  const activity = {
+                    item: 'supplier',
+                    action: 'delete',
+                    user: 'admin',
+                    datetime: new Date().toISOString(),
+                  };
+                  insertActivity(activity);
+                } catch (error) {
+                  console.error('Error deleting supplier:', error);
+                  sendResponse(res, 500, { error: 'Error deleting supplier' });
+                }
+                break;
+                case '/api/department':
+                  try {
+                    const departmentId = reqUrl.query.id;
+                    deleteDepartment(departmentId);
+                    sendResponse(res, 200, { message: 'Department deleted successfully' });
+                    const activity = {
+                      item: 'department',
+                      action: 'delete',
+                      user: 'admin',
+                      datetime: new Date().toISOString(),
+                    };
+                    insertActivity(activity);
+                  } catch (error) {
+                    console.error('Error deleting department:', error);
+                    sendResponse(res, 500, { error: 'Error deleting department' });
+                  }
+                  break;
+                case '/api/maintenance':
+                  try {
+                    const maintenanceId = reqUrl.query.id;
+                    deleteMaintenance(maintenanceId);
+                    sendResponse(res, 200, { message: 'Maintenance deleted successfully' });
+                    const activity = {
+                      item: 'maintenance',
+                      action: 'delete',
+                      user: 'admin',
+                      datetime: new Date().toISOString(),
+                    };
+                    insertActivity(activity);
+                  } catch (error) {
+                    console.error('Error deleting maintenance:', error);
+                    sendResponse(res, 500, { error: 'Error deleting maintenance' });
+                  }
+                  break;
+                  case '/api/recentActivity':
+                    try {
+                      const recentActivityId = reqUrl.query.id;
+                      deleteActivity(recentActivityId);
+                      sendResponse(res, 200, { message: 'Activity deleted successfully' });
+                    } catch (error) {
+                      console.error('Error deleting activity:', error);
+                      sendResponse(res, 500, { error: 'Error deleting activity' });
+                    }
+                    break;
+                    default:
+                      sendResponse(res, 404, { message: 'Endpoint not found' });
+                  }
+                } else {
+                  sendResponse(res, 405, { message: 'Method not allowed' });
+                }
+              }
     
     // Function to send a JSON response with the specified status code and data
     function sendResponse(res, statusCode, data) {
@@ -935,20 +897,8 @@ function handleRequest(req, res, db, reqUrl, requestData) {
         res.end('Hey this is my API running 🥳');
       }
     });
-
-    // Close the database connection when the server is closed
-    server.on('close', () => {
-      db.close((err) => {
-        if (err) {
-          console.error('Error closing the database connection:', err.message);
-        } else {
-          console.log('Database connection closed.');
-        }
-      });
-    });
     
     // Start the server and listen for incoming connections on the specified port
     server.listen(PORT, () => {
       console.log(`Server is running on localhost:${PORT}`);
     });
-    
