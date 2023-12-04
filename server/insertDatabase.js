@@ -2,7 +2,7 @@ const { sql } = require('@vercel/postgres');
 
 // Function to check if a table is empty
 async function isTableEmpty(tableName) {
-  const { rows } = await sql`SELECT EXISTS (SELECT 1 FROM ${sql(tableName)} LIMIT 1) AS "isEmpty"`;
+  const { rows } = await sql`SELECT EXISTS (SELECT 1 FROM ${sql.identifier([tableName])} LIMIT 1) AS "isEmpty"`;
   return rows[0].isEmpty === 0;
 }
 
@@ -10,10 +10,10 @@ async function isTableEmpty(tableName) {
 async function insertIfTableEmpty(tableName, insertQuery, newComputer) {
   const isEmpty = await isTableEmpty(tableName);
   if (isEmpty) {
-    await sql`${sql(insertQuery)}`;
+    await sql`${insertQuery}`;
   }
   return newComputer;
-}
+};
   
 // Example INSERT statements
 const insertComputersQuery = sql`
