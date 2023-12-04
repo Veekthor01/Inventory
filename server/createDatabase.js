@@ -111,7 +111,7 @@ await sql`
       )
     `;
     console.log('Department table created');
-  }
+  
 
 // Create the 'maintenance' table
     await sql`
@@ -161,6 +161,8 @@ await sql`
       )
     `;
     console.log('Room_data table created');
+
+      }
 
   sql.on('error', (err) => {
     console.error('Database error:', err.message);
