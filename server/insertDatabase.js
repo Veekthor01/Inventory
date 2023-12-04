@@ -30,7 +30,6 @@ const insertComputersQuery = sql`
     ('ST67897', 'Intel i7', '1TB', '16GB', 'Logitech', 'Microsoft', 'Dell', 'MN7890', 'Windows 10', 'OfficePC', 'Room 2.2', 'Available'),
     ('NO12341', 'AMD Ryzen 5', '512GB', '8GB', 'HP', 'HP', 'LG', 'MN5678', 'Ubuntu 20.04', 'EdulinkPC', 'Room 2.4', 'In Use'),
     ('OP23456', 'Intel i5 7', '1TB', '32GB', 'Logitech', 'Logitech', 'Dell', 'MN1234', 'Ubuntu 20.04', 'EdulinkPC', 'Room 2.1', 'In Use'),
-    ('CP56781', 'Intel i3', '256GB', '4GB', 'HP', 'HP', 'LG', 'MN8901', 'Windows 11', 'OfficePC', 'Library', 'Available'),//
     ('UI34562', 'AMD Ryzen 9', '2TB', '64GB', 'Logitech', 'Microsoft', 'Dell', 'MN6789', 'Ubuntu 20.04', 'EdulinkPC', 'Room 2.6', 'In Use'),
     ('UX67893', 'AMD Ryzen 5', '512GB', '8GB', 'HP', 'HP', 'LG', 'MN5678', 'Ubuntu 20.04', 'AptechPC', 'Room 2.6', 'In Use'),
     ('ZT12344', 'Intel i7', '1TB', '16GB', 'Logitech', 'Microsoft', 'Dell', 'MN7890', 'Windows 10', 'EdulinkPC', 'Room 2.1', 'Available'),
