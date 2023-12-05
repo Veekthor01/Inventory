@@ -60,10 +60,8 @@ const ChartPage = () => {
     const visibleColors = colors.filter((color, index) => visibleSlices[index]);
 
     const data = {
-      labels: labels.filter((label, index) => visibleSlices[index]),
       datasets: [
         {
-          label: ['Components', 'Computers', 'Accessories', 'Personnel', 'Licenses', 'Suppliers'],
           data: visibleCounts,
           backgroundColor: visibleColors,
           hoverOffset: 10,
@@ -78,8 +76,8 @@ const ChartPage = () => {
           callbacks: {
             label: (context) => {
               const label = labels[context.dataIndex];
-              const value = context.parsed;
-              return `${label}: ${value}`;
+              const count = counts[context.dataIndex];
+              return `${label}: ${count}`;
             },
           },
         },
