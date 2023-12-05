@@ -15,10 +15,20 @@
 
 ## Getting Started
 
-#### To get started with the Inventory App, clone the repository and install the necessary dependencies with
+#### To get started with the Inventory App, clone or download the repository and follow these steps:
+Navigate to the project directory e.g
+```
+cd inventory
+```
+Install dependencies:
 ```
 npm install
 ```
+Start the dev server:
+```
+npm start
+```
+
 ## How to Use
 
 * Navigate through the dashboard sections to view real-time data, charts, and recent activities.
