@@ -56,7 +56,7 @@ const RecentActivity = () => {
                         <tr key={activity.id}>
                             <td>{activity.item}</td>
                             <td>{activity.action}</td>
-                            <td>{activity.user}</td>
+                            <td>{activity.account}</td>
                             <td>{formatDateTime(activity.datetime)}</td>
                         </tr>
                     ))}

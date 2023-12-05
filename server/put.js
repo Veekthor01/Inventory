@@ -1,7 +1,7 @@
-const { sql } = require('@vercel/postgres');
+const { pool } = require('./db');
 
 const updateComputer = async (computerId, updatedComputer) => {
-  const updateComputerQuery = sql`
+  const updateComputerQuery = pool.query(`
     UPDATE computers
     SET
       pc_sn = ${updatedComputer.pc_sn},
@@ -18,17 +18,17 @@ const updateComputer = async (computerId, updatedComputer) => {
       status = ${updatedComputer.status}
     WHERE
       id = ${computerId}
-  `;
+  `);
 
   try {
-    await sql`${updateComputerQuery}`;
+    await pool.query`${updateComputerQuery}`;
   } catch (err) {
     console.error(`Error updating computer in the computers table: ${err.message}`);
   }
 };
 
 const updateAccessory = async (AccessoryId, updatedAccessory) => {
-  const updateAccessoryQuery = sql`
+  const updateAccessoryQuery = pool.query(`
     UPDATE accessories
     SET
       type = ${updatedAccessory.type},
@@ -39,17 +39,17 @@ const updateAccessory = async (AccessoryId, updatedAccessory) => {
       room = ${updatedAccessory.room}
     WHERE
       id = ${AccessoryId}
-  `;
+  `);
 
   try {
-    await sql`${updateAccessoryQuery}`;
+    await pool.query`${updateAccessoryQuery}`;
   } catch (err) {
     console.error(`Error updating accessory in the accessories table: ${err.message}`);
   }
 };
   
 const updateComponent = async (ComponentId, updatedComponent) => {
-  const updateComponentQuery = sql`
+  const updateComponentQuery = pool.query(`
     UPDATE components
     SET
       type = ${updatedComponent.type},
@@ -65,17 +65,17 @@ const updateComponent = async (ComponentId, updatedComponent) => {
       status = ${updatedComponent.status}
     WHERE
       id = ${ComponentId}
-  `;
+  `);
 
   try {
-    await sql`${updateComponentQuery}`;
+    await pool.query`${updateComponentQuery}`;
   } catch (err) {
     console.error(`Error updating component in the components table: ${err.message}`);
   }
 };
   
 const updatePersonnel = async (PersonnelId, updatedPersonnel) => {
-  const updatePersonnelQuery = sql`
+  const updatePersonnelQuery = pool.query(`
     UPDATE personnel
     SET
       first_name = ${updatedPersonnel.first_name},
@@ -85,17 +85,17 @@ const updatePersonnel = async (PersonnelId, updatedPersonnel) => {
       email_address = ${updatedPersonnel.email_address}
     WHERE
       id = ${PersonnelId}
-  `;
+  `);
 
   try {
-    await sql`${updatePersonnelQuery}`;
+    await pool.query`${updatePersonnelQuery}`;
   } catch (err) {
     console.error(`Error updating personnel: ${err.message}`);
   }
 };
 
 const updateLicense = async (LicenseId, updatedLicense) => {
-  const updateLicenseQuery = sql`
+  const updateLicenseQuery = pool.query(`
     UPDATE licenses
     SET
       product_name = ${updatedLicense.product_name},
@@ -103,17 +103,17 @@ const updateLicense = async (LicenseId, updatedLicense) => {
       expired = ${updatedLicense.expired}
     WHERE
       id = ${LicenseId}
-  `;
+  `);
 
   try {
-    await sql`${updateLicenseQuery}`;
+    await pool.query`${updateLicenseQuery}`;
   } catch (err) {
     console.error(`Error updating license: ${err.message}`);
   }
 };
 
 const updateCategory = async (CategoryId, updatedCategory) => {
-  const updateCategoryQuery = sql`
+  const updateCategoryQuery = pool.query(`
     UPDATE categories
     SET
       name = ${updatedCategory.name},
@@ -121,17 +121,17 @@ const updateCategory = async (CategoryId, updatedCategory) => {
       description = ${updatedCategory.description}
     WHERE
       id = ${CategoryId}
-  `;
+  `);
 
   try {
-    await sql`${updateCategoryQuery}`;
+    await pool.query`${updateCategoryQuery}`;
   } catch (err) {
     console.error(`Error updating category: ${err.message}`);
   }
 };
 
 const updateSupplier = async (SuppliersId, updatedSuppliers) => {
-  const updateSuppliersQuery = sql`
+  const updateSuppliersQuery = pool.query(`
     UPDATE suppliers
     SET
       name = ${updatedSuppliers.name},
@@ -142,34 +142,34 @@ const updateSupplier = async (SuppliersId, updatedSuppliers) => {
       quantity = ${updatedSuppliers.quantity}
     WHERE
       id = ${SuppliersId}
-  `;
+  `);
 
   try {
-    await sql`${updateSuppliersQuery}`;
+    await pool.query`${updateSuppliersQuery}`;
   } catch (err) {
     console.error(`Error updating supplier: ${err.message}`);
   }
 };
 
 const updateDepartment = async (DepartmentId, updatedDepartment) => {
-  const updateDepartmentQuery = sql`
+  const updateDepartmentQuery = pool.query(`
     UPDATE department
     SET
       department = ${updatedDepartment.department},
       staff = ${updatedDepartment.staff}
     WHERE
       id = ${DepartmentId}
-  `;
+  `);
 
   try {
-    await sql`${updateDepartmentQuery}`;
+    await pool.query`${updateDepartmentQuery}`;
   } catch (err) {
     console.error(`Error updating department: ${err.message}`);
   }
 };
 
 const updateMaintenance = async (MaintenanceId, updatedMaintenance) => {
-  const updateMaintenanceQuery = sql`
+  const updateMaintenanceQuery = pool.query(`
     UPDATE maintenance
     SET
       item_name = ${updatedMaintenance.item_name},
@@ -177,42 +177,39 @@ const updateMaintenance = async (MaintenanceId, updatedMaintenance) => {
       maintenance_type = ${updatedMaintenance.maintenance_type}
     WHERE
       id = ${MaintenanceId}
-  `;
+  `);
 
   try {
-    await sql`${updateMaintenanceQuery}`;
+    await pool.query`${updateMaintenanceQuery}`;
   } catch (err) {
     console.error(`Error updating maintenance: ${err.message}`);
   }
 };
 
 const updateChartData = async () => {
-  const selectCountsQuery = sql`
-    SELECT
-      (SELECT COUNT(*) FROM components) AS component_count,
-      (SELECT COUNT(*) FROM computers) AS computer_count,
-      (SELECT COUNT(*) FROM accessories) AS accessory_count,
-      (SELECT COUNT(*) FROM personnel) AS personnel_count,
-      (SELECT COUNT(*) FROM licenses) AS license_count,
-      (SELECT COUNT(*) FROM suppliers) AS supplier_count;
-  `;
-
   try {
-    const result = await sql`${selectCountsQuery}`;
+    const result = await pool.query(`
+      SELECT
+        (SELECT COUNT(*) FROM components) AS component_count,
+        (SELECT COUNT(*) FROM computers) AS computer_count,
+        (SELECT COUNT(*) FROM accessories) AS accessory_count,
+        (SELECT COUNT(*) FROM personnel) AS personnel_count,
+        (SELECT COUNT(*) FROM licenses) AS license_count,
+        (SELECT COUNT(*) FROM suppliers) AS supplier_count
+    `);
+
     const { component_count, computer_count, accessory_count, personnel_count,
      license_count, supplier_count } = result.rows[0];
 
-    const updateQuery = sql`
+    await pool.query(`
       UPDATE chart_data
-      SET component_count = ${component_count},
-          computer_count = ${computer_count},
-          accessory_count = ${accessory_count},
-          personnel_count = ${personnel_count},
-          license_count = ${license_count},
-          supplier_count = ${supplier_count};
-    `;
-
-    await sql`${updateQuery}`;
+      SET component_count = $1,
+          computer_count = $2,
+          accessory_count = $3,
+          personnel_count = $4,
+          license_count = $5,
+          supplier_count = $6
+    `, [component_count, computer_count, accessory_count, personnel_count, license_count, supplier_count]);
   } catch (err) {
     console.error(`Error updating chart data: ${err.message}`);
   }

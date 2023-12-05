@@ -1,11 +1,10 @@
 const http = require('http');
 const url = require('url');
-const { sql } = require('@vercel/postgres');
+const { pool } = require('./db');
 const setupDatabase = require('./createDatabase');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
-const { insertIfTableEmpty } = require('./insertDatabase');
 const { createComputer } = require('./post');
 const { createAccessory } = require('./post');
 const { createComponent } = require('./post');
@@ -91,24 +90,24 @@ function handleCorsHeaders(req, res) {
 //* Check if the table 'credentials' exists in the database
 async function setupCredentialsTable() {
   try {
-    const result = await sql`
+    const result = await pool.query(`
       SELECT 
         EXISTS (
           SELECT FROM information_schema.tables 
           WHERE  table_schema = 'public'
           AND    table_name   = 'credentials'
         )
-    `;
+    `);
     if (result.rows[0].exists) {
       checkDefaultUserExists();
     } else {
-      await sql`
+      await pool.query(`
         CREATE TABLE credentials (
           id SERIAL PRIMARY KEY,
           username TEXT NOT NULL UNIQUE,
           password TEXT NOT NULL
         )
-      `;
+      `);
       insertDefaultUser();
     }
   } catch (err) {
@@ -124,7 +123,7 @@ async function handleLogin(req, res) {
   const { username, password } = req.body;
   try {
     // Retrieve the hashed password from the database for the given username
-    const result = await sql`SELECT password FROM credentials WHERE username = ${username}`;
+    const result = await pool.query(`SELECT password FROM credentials WHERE username = $1`, [username]);
     if (result.rows.length > 0) {
       const hashedPasswordFromDB = result.rows[0].password;
       // Compare the provided password with the hashed password from the database
@@ -166,7 +165,7 @@ async function changePassword(req, res) {
   try {
     const { username, oldPassword, newPassword } = req.body;
     // Retrieve the hashed password from the database for the given username
-    const result = await sql`SELECT password FROM credentials WHERE username = ${username}`;
+    const result = await pool.query(`SELECT password FROM credentials WHERE username = $1`, [username]);
     if (result.rows.length > 0) {
       const hashedPasswordFromDB = result.rows[0].password;
       // Verify the old password
@@ -175,7 +174,7 @@ async function changePassword(req, res) {
         // Hash the new password
         const hashedNewPassword = bcrypt.hashSync(newPassword, 10);
         // Update the password in the database
-        await sql`UPDATE credentials SET password = ${hashedNewPassword} WHERE username = ${username}`;
+        await pool.query(`UPDATE credentials SET password = $1 WHERE username = $2`, [hashedNewPassword, username]);
         sendResponse(res, 200, { message: 'Password changed successfully' });
       } else {
         sendResponse(res, 401, { error: 'Invalid old password' });
@@ -194,7 +193,7 @@ async function checkDefaultUserExists() {
   const defaultUsername = 'admin';
   try {
     // Check if the default user already exists in the credentials table
-    const result = await sql`SELECT * FROM credentials WHERE username = ${defaultUsername}`;
+    const result = await pool.query(`SELECT * FROM credentials WHERE username = $1`, [defaultUsername]);
     if (result.rows.length === 0) {
       // If the default user doesn't exist, insert it
       insertDefaultUser();
@@ -212,7 +211,7 @@ async function insertDefaultUser() {
   const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
   try {
     // Insert the default user into the credentials table
-    await sql`INSERT INTO credentials (username, password) VALUES (${defaultUsername}, ${hashedPassword})`;
+    await pool.query(`INSERT INTO credentials (username, password) VALUES ($1, $2)`, [defaultUsername, hashedPassword]);
   } catch (err) {
     console.error('Error inserting default user:', err.message);
   }
@@ -222,10 +221,10 @@ async function insertDefaultUser() {
 const insertActivity = async (activity) => {
   try {
     // Insert the activity into the recentActivity table
-    await sql`
-      INSERT INTO recentActivity (item, action, user, datetime)
-      VALUES (${activity.item}, ${activity.action}, ${activity.user}, ${activity.datetime})
-    `;
+    await pool.query(`
+      INSERT INTO recentActivity (item, action, account, datetime)
+      VALUES ($1, $2, $3, $4)
+    `, [activity.item, activity.action, activity.account, activity.datetime]);
   } catch (err) {
     console.error('Error inserting activity:', err);
   }
@@ -238,7 +237,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
       case '/api/credentials':
         try {
           // Fetch and return actual information about credentials
-          const result = await sql`SELECT * FROM credentials`;
+          const result = await pool.query(`SELECT * FROM credentials`);
           if (result.rows.length === 0) {
             sendResponse(res, 404, { error: 'No credentials found' });
           } else {
@@ -251,7 +250,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
         case '/api/recentActivity':
           try {
             // Fetch and return actual information about recent_activity
-            const result = await sql`SELECT * FROM recentActivity ORDER BY datetime DESC`;
+            const result = await pool.query(`SELECT * FROM recentActivity ORDER BY id DESC`);
             if (result.rows.length === 0) {
               sendResponse(res, 404, { error: 'No activity found' });
             } else {
@@ -264,8 +263,8 @@ async function handleRequest(req, res, reqUrl, requestData) {
           case '/api/chart_data':
             try {
               // Fetch and return actual information about charts
-              const result = await sql`SELECT component_count, computer_count, 
-              accessory_count, personnel_count, license_count, supplier_count FROM chart_data LIMIT 1`;
+              const result = await pool.query(`SELECT component_count, computer_count, 
+              accessory_count, personnel_count, license_count, supplier_count FROM chart_data LIMIT 1`);
               if (result.rows.length === 0) {
                 sendResponse(res, 404, { error: 'No chart Data found' });
               } else {
@@ -279,7 +278,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
           case '/api/room_data':
             try {
               // Fetch and return actual information about room_data
-              const result = await sql`SELECT * FROM room_data`;
+              const result = await pool.query(`SELECT * FROM room_data`);
               if (result.rows.length === 0) {
                 sendResponse(res, 404, { error: 'No room data found' });
               } else {
@@ -292,7 +291,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
           case '/api/computers':
             try {
               // Fetch and return actual information about computers
-              const result = await sql`SELECT * FROM computers`;
+              const result = await pool.query(`SELECT * FROM computers`);
               if (result.rows.length === 0) {
                 sendResponse(res, 404, { error: 'No computers found' });
               } else {
@@ -305,7 +304,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
             case '/api/accessories':
               try {
                 // Fetch and return actual information about accessories
-                const result = await sql`SELECT * FROM accessories`;
+                const result = await pool.query(`SELECT * FROM accessories`);
                 if (result.rows.length === 0) {
                   sendResponse(res, 404, { error: 'No accessories found' });
                 } else {
@@ -318,7 +317,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
             case '/api/components':
               try {
                 // Fetch and return actual information about components
-                const result = await sql`SELECT * FROM components ORDER BY id DESC`;
+                const result = await pool.query(`SELECT * FROM components`);
                 if (result.rows.length === 0) {
                   sendResponse(res, 404, { error: 'No components found' });
                 } else {
@@ -331,7 +330,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
             case '/api/personnel':
               try {
                 // Fetch and return actual information about personnel
-                const result = await sql`SELECT * FROM personnel`;
+                const result = await pool.query(`SELECT * FROM personnel`);
                 if (result.rows.length === 0) {
                   sendResponse(res, 404, { error: 'No personnel found' });
                 } else {
@@ -344,7 +343,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               case '/api/licenses':
                 try {
                   // Fetch and return actual information about licenses
-                  const result = await sql`SELECT * FROM licenses`;
+                  const result = await pool.query(`SELECT * FROM licenses`);
                   if (result.rows.length === 0) {
                     sendResponse(res, 404, { error: 'No licenses found' });
                   } else {
@@ -357,7 +356,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               case '/api/categories':
                 try {
                   // Fetch and return actual information about categories
-                  const result = await sql`SELECT * FROM categories`;
+                  const result = await pool.query(`SELECT * FROM categories`);
                   if (result.rows.length === 0) {
                     sendResponse(res, 404, { error: 'No categories found' });
                   } else {
@@ -370,7 +369,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               case '/api/suppliers':
                 try {
                   // Fetch and return actual information about suppliers
-                  const result = await sql`SELECT * FROM suppliers`;
+                  const result = await pool.query(`SELECT * FROM suppliers`);
                   if (result.rows.length === 0) {
                     sendResponse(res, 404, { error: 'No suppliers found' });
                   } else {
@@ -383,7 +382,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 case '/api/department':
                   try {
                     // Fetch and return actual information about departments
-                    const result = await sql`SELECT * FROM department`;
+                    const result = await pool.query(`SELECT * FROM department`);
                     if (result.rows.length === 0) {
                       sendResponse(res, 404, { error: 'No departments found' });
                     } else {
@@ -396,7 +395,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 case '/api/maintenance':
                   try {
                     // Fetch and return actual information about maintenance
-                    const result = await sql`SELECT * FROM maintenance`;
+                    const result = await pool.query(`SELECT * FROM maintenance`);
                     if (result.rows.length === 0) {
                       sendResponse(res, 404, { error: 'No maintenance found' });
                     } else {
@@ -419,7 +418,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'Victor',
                 action: 'login',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -432,7 +431,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'computer',
                 action: 'create new',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -448,7 +447,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'accessory',
                 action: 'create new',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -464,7 +463,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'component',
                 action: 'create new',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -480,7 +479,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'personnel',
                 action: 'create new',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -546,7 +545,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
              const activity = {
               item: 'Victor',
               action: 'change password',
-              user: 'admin',
+              account: 'admin',
               datetime: new Date().toISOString(),
             };
             insertActivity(activity);
@@ -560,7 +559,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'computer',
                 action: 'update',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -577,7 +576,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 const activity = {
                   item: 'accessory',
                   action: 'update',
-                  user: 'admin',
+                  account: 'admin',
                   datetime: new Date().toISOString(),
                 };
                 insertActivity(activity);
@@ -595,7 +594,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 const activity = {
                   item: 'component',
                   action: 'update',
-                  user: 'admin',
+                  account: 'admin',
                   datetime: new Date().toISOString(),
                 };
                 insertActivity(activity);
@@ -612,7 +611,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 const activity = {
                   item: 'personnel',
                   action: 'update',
-                  user: 'admin',
+                  account: 'admin',
                   datetime: new Date().toISOString(),
                 };
                 insertActivity(activity);
@@ -629,7 +628,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                   const activity = {
                     item: 'license',
                     action: 'update',
-                    user: 'admin',
+                    account: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
@@ -646,7 +645,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                   const activity = {
                     item: 'category',
                     action: 'update',
-                    user: 'admin',
+                    account: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
@@ -663,7 +662,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 const activity = {
                   item: 'supplier',
                   action: 'update',
-                  user: 'admin',
+                  account: 'admin',
                   datetime: new Date().toISOString(),
                 };
                 insertActivity(activity);
@@ -680,7 +679,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 const activity = {
                   item: 'department',
                   action: 'update',
-                  user: 'admin',
+                  account: 'admin',
                   datetime: new Date().toISOString(),
                 };
                 insertActivity(activity);
@@ -697,7 +696,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                   const activity = {
                     item: 'maintenance',
                     action: 'update',
-                    user: 'admin',
+                    account: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
@@ -719,7 +718,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'computer',
                 action: 'delete',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -736,7 +735,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
               const activity = {
                 item: 'accessory',
                 action: 'delete',
-                user: 'admin',
+                account: 'admin',
                 datetime: new Date().toISOString(),
               };
               insertActivity(activity);
@@ -753,7 +752,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 const activity = {
                   item: 'component',
                   action: 'delete',
-                  user: 'admin',
+                  account: 'admin',
                   datetime: new Date().toISOString(),
                 };
                 insertActivity(activity);
@@ -770,7 +769,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                 const activity = {
                   item: 'personnel',
                   action: 'delete',
-                  user: 'admin',
+                  account: 'admin',
                   datetime: new Date().toISOString(),
                 };
                 insertActivity(activity);
@@ -787,7 +786,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                   const activity = {
                     item: 'license',
                     action: 'delete',
-                    user: 'admin',
+                    account: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
@@ -804,7 +803,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                   const activity = {
                     item: 'category',
                     action: 'delete',
-                    user: 'admin',
+                    account: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
@@ -821,7 +820,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                   const activity = {
                     item: 'supplier',
                     action: 'delete',
-                    user: 'admin',
+                    account: 'admin',
                     datetime: new Date().toISOString(),
                   };
                   insertActivity(activity);
@@ -838,7 +837,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                     const activity = {
                       item: 'department',
                       action: 'delete',
-                      user: 'admin',
+                      account: 'admin',
                       datetime: new Date().toISOString(),
                     };
                     insertActivity(activity);
@@ -855,7 +854,7 @@ async function handleRequest(req, res, reqUrl, requestData) {
                     const activity = {
                       item: 'maintenance',
                       action: 'delete',
-                      user: 'admin',
+                      account: 'admin',
                       datetime: new Date().toISOString(),
                     };
                     insertActivity(activity);
