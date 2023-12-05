@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Chart, ArcElement, Tooltip } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import axios from 'axios';
+import 'chartjs-plugin-datalabels';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -60,6 +61,7 @@ const ChartPage = () => {
     const visibleColors = colors.filter((color, index) => visibleSlices[index]);
 
     const data = {
+      labels,
       datasets: [
         {
           data: visibleCounts,
