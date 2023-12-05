@@ -62,6 +62,7 @@ const ChartPage = () => {
 
     const data = {
       labels,
+      counts,
       datasets: [
         {
           data: visibleCounts,
