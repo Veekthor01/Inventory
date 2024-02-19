@@ -7,6 +7,8 @@
 * Real-time Data Display: The dashboard provides an up-to-date overview of the inventory data, giving administrators quick access to the current status of items.
 * Graphical Charts: The app includes graphical charts to visually represent the number of different items, and are dynamically updated.
 * Recent Activity Tracking: The Recent Activity Table records and displays all activities performed in the app.
+* Create a user Profile.
+* Change Password functionality
 
 ## Technologies Used
 * React(CRA)
