@@ -3,6 +3,8 @@ import { Chart, ArcElement, Tooltip } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import axios from 'axios';
 
+Chart.register(ArcElement, Tooltip);
+
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL;
 
 // array of labels representing different categories
@@ -103,13 +105,6 @@ const ChartPage = () => {
     setClickedButtons(updatedClickedButtons);
   };
 
-  // Effect to register chart elements and tooltips when chart data is available
-  useEffect(() => {
-    if (chartData) {
-      Chart.register(ArcElement, Tooltip);
-    }
-  }, [chartData]);
-
   return (
     <div>
       <h2>Item Inventory</h2>
@@ -146,5 +141,4 @@ const ChartPage = () => {
   );
 };
 
-Chart.register(ArcElement);
 export default ChartPage;
