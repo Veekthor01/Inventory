@@ -58,7 +58,7 @@ const ColumnChart = () => {
       responsive: true,
       plugins: {
         datalabels: {
-          display: false, // Hide the default data labels
+          display: false,
         },
       },
       scales: {
@@ -69,7 +69,7 @@ const ColumnChart = () => {
             text: 'Staff Count',
           },
           grid: {
-            display: false, // Remove grid lines for the y-axis (rows)
+            display: false,
           },
         },
         x: {
@@ -80,10 +80,10 @@ const ColumnChart = () => {
           ticks: {
             maxRotation: 90,
             minRotation: 90,
-            display: false, // Hide the labels
+            display: false,
           },
           grid: {
-            display: false, // Remove grid lines for the y-axis (rows)
+            display: false,
           },
         },
       },
