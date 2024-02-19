@@ -14,6 +14,7 @@
 * React(CRA)
 * NodeJs
 * PostgreSQL
+* React-chartjs-2
 
 ## Getting Started
 
