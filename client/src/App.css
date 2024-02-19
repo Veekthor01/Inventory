@@ -1156,8 +1156,8 @@ footer p {
     }
     
     .widget-box i {
-      font-size: 40px;
-      left: -4px;
+      font-size: 35px;
+      left: -9px;
     }
     .activity_charts {
       display: flex;
@@ -1408,9 +1408,9 @@ footer p {
     }
     
     .widget-box i {
-      font-size: 35px; 
-      top: -35px;
-      left: -8px;
+      font-size: 32px; 
+      top: -40px;
+      left: -16px;
     }
     .activity_charts {
       display: flex;
