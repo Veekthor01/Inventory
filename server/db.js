@@ -12,4 +12,3 @@ pool.on('connect', () => {
   })
 
 module.exports = { pool };
-//REACT_APP_BACKEND_URL=https://edu-inventory-server.vercel.app
