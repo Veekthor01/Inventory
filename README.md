@@ -1,6 +1,6 @@
 # Inventory - Admin Dashboard
 
-#### The Inventory App is an admin dashboard designed for managing and recording data, in this case(a school environment).
+#### The Inventory App is an admin dashboard designed for managing and recording data, in this case (a school environment).
 
 ## Features
 
