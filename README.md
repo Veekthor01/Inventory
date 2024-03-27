@@ -8,7 +8,7 @@
 * Graphical Charts: The app includes graphical charts to visually represent the number of different items, and are dynamically updated.
 * Recent Activity Tracking: The Recent Activity Table records and displays all activities performed in the app.
 * Create a user Profile.
-* Change Password functionality
+* Change Password functionality.
 
 ## Technologies Used
 * React(CRA)
