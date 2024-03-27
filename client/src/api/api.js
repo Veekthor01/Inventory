@@ -35,7 +35,7 @@ export const createComputer = async (computerData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating computer:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -58,7 +58,7 @@ export const updateComputer = async (computerId, updatedComputerData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating computer:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -76,7 +76,7 @@ export const deleteComputer = async (computerId) => {
         }
     } catch (error) {
         console.error('Error deleting computer:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -114,7 +114,7 @@ export const createAccessory = async (accessoryData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating accessory:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error) 
     }
 }
 
@@ -137,7 +137,7 @@ export const updateAccessory = async (accessoryId, updatedAccessoryData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating accessory:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -155,7 +155,7 @@ export const deleteAccessory = async (accessoryId) => {
         }
     } catch (error) {
         console.error('Error deleting accessory:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -192,7 +192,7 @@ export const createComponent = async (componentData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating component:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -215,7 +215,7 @@ export const updateComponent = async (componentId, updatedComponentData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating component:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -233,7 +233,7 @@ export const deleteComponent = async (componentId) => {
         }
     } catch (error) {
         console.error('Error deleting component:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -247,7 +247,7 @@ export const fetchPersonnel = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching personnel:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -267,7 +267,7 @@ export const createPersonnel = async (personnelData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating personnel:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -290,7 +290,7 @@ export const updatePersonnel = async (personnelId, updatedPersonnelData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating personnel:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -308,7 +308,7 @@ export const deletePersonnel = async (personnelId) => {
         }
     } catch (error) {
         console.error('Error deleting personnel:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error) 
     }
 }
 
@@ -322,7 +322,7 @@ export const fetchLicenses = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching licenses:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -342,7 +342,7 @@ export const createLicense = async (licenseData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating license:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -365,7 +365,7 @@ export const updateLicense = async (licenseId, updatedLicenseData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating license:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -383,7 +383,7 @@ export const deleteLicense = async (licenseId) => {
         }
     } catch (error) {
         console.error('Error deleting license:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -397,7 +397,7 @@ export const fetchCategories = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching categories:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -417,7 +417,7 @@ export const createCategory = async (categoryData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating category:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -440,7 +440,7 @@ export const updateCategory = async (categoryId, updatedCategoryData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating category:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -458,7 +458,7 @@ export const deleteCategory = async (categoryId) => {
         }
     } catch (error) {
         console.error('Error deleting category:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error) 
     }
 }
 
@@ -472,7 +472,7 @@ export const fetchSuppliers = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching suppliers:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -492,7 +492,7 @@ export const createSupplier = async (supplierData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating supplier:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -515,7 +515,7 @@ export const updateSupplier = async (supplierId, updatedSupplierData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating supplier:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -533,7 +533,7 @@ export const deleteSupplier = async (supplierId) => {
         }
     } catch (error) {
         console.error('Error deleting supplier:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -547,7 +547,7 @@ export const fetchDepartment = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching departments:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -567,7 +567,7 @@ export const createDepartment = async (departmentData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating department:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -590,7 +590,7 @@ export const updateDepartment = async (departmentId, updatedDepartmentData) => {
         return await response.json()
     } catch (error) {
         console.error('Error updating department:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -608,7 +608,7 @@ export const deleteDepartment = async (departmentId) => {
         }
     } catch (error) {
         console.error('Error deleting department:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -622,7 +622,7 @@ export const fetchMaintenance = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching maintenance:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -642,7 +642,7 @@ export const createMaintenance = async (maintenanceData) => {
         return await response.json()
     } catch (error) {
         console.error('Error creating maintenance:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -668,7 +668,7 @@ export const updateMaintenance = async (
         return await response.json()
     } catch (error) {
         console.error('Error updating maintenance:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -686,7 +686,7 @@ export const deleteMaintenance = async (maintenanceId) => {
         }
     } catch (error) {
         console.error('Error deleting maintenance:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -700,7 +700,7 @@ export const fetchRecentActivity = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching activities:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -714,7 +714,7 @@ export const fetchChartActivity = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching chart:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
 
@@ -728,6 +728,6 @@ export const fetchRoomTable = async () => {
         return await response.json()
     } catch (error) {
         console.error('Error fetching chart:', error)
-        return Promise.reject(error) // Propagate the error to the calling function
+        return Promise.reject(error)
     }
 }
